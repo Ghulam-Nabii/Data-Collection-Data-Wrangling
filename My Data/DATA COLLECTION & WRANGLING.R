@@ -58,17 +58,30 @@ library("readxl")
 readxl_example()
 
 xlsx_example <- readxl_example("datasets.xls")
-read_excel(xlsx_example)
-
+ex<- read_excel(xlsx_example)
+ex
 cd <- read_excel("mycameras.xlsx")
 cd
 head(cd)
+excel_sheets(xlsx_example)
+read_excel(xlsx_example,sheet = "quakes")
+read_excel(xlsx_example,sheet =  4)
+read_excel(xlsx_example,n_max = 3)
+read_excel(xlsx_example,range = )
 
 # write excel files 
 library(writexl)
 write_xlsx(cameraData,"mycamera.xlsx")
 
-?read_excel
+# openxlsx: Read, Write and Edit xlsx Files
+
+library(openxlsx)
+
+write.xlsx(cameraData,"mycamera.xlsx",asTable = T)
+
+
+
+
 
 # Reading webpages 
 
@@ -228,6 +241,45 @@ x[,]
 
 DT[order(-DT$y,DT$z),]
 
+# more in subsetting and sorting
+set.seed(12345)
+x <- data.frame("var1"=sample(1:5),"var2"=sample(6:10),"var3"=sample(11:15))
+x
+x[sample(1:5),];x$var2[c(1,3)]=NA
+x
+x[,1]
+x[,"var2"]
+x[1:3,"var3"]
+x[(x$var1 <=3 & x$var3 > 11),]
+sort(x$var1)
+sort(x$var2,decreasing = T,na.last = T)
+
+# sorting and ordering Data Frame in R 
+title <- c('Data Smart','Orientalism','False Impressions','The Age of Wrath','Making Software')
+author <- c('Foreman, John','Said, Edward','Archer, Jeffery','Eraly, Abraham','Oram, Andy')
+height <- c('235','197','177','238','235')
+year <- c('2010','2011','2012','1999','1998')
+bookDF <-  data.frame(title, author, height, year)
+bookDF
+sorted_BookDF <- bookDF[order(bookDF[,1],decreasing = T),]
+sorted_BookDF
+
+## ordering or arranging by dplyr function
+ordered_BookDF <- arrange(bookDF,desc(year))
+ordered_BookDF
+
+id <- c('S1002','S1003','S1005','S1008','S1011','S1015')
+age <- c(58, 67,64, 34, 30, 37)
+gender <- c('female','male','male','male','male','male')
+height <- c(61, 67, 68, 71, 69, 59)
+weight <- c(256, 119, 183, 190, 191, 170)
+# Create a data frame
+subjectDfrm <-  data.frame(id, age, gender, weight)
+subjectDfrm
+sortedSubjectDfrm <- arrange(subjectDfrm,age,weight,gender)
+sortedSubjectDfrm
+subjectDfrm %>% arrange(age,weight,gender) %>% head
+
 
 # DEALING WITH MISSING VALUES
 
@@ -377,6 +429,28 @@ head(mtcars_n)
 mtcars_n <- mutate(mtcars,mpg_cyl = mpg*cyl)
 mtcars_n
 ?summarise
+
+# Mutate in R along with ifelse and grepl
+library(dplyr)
+head(mutate(mtcars,disp_1 = disp/61.0237),3)
+x <- 10
+ifelse(x>9,"x is greater than 9","x is not greater than 9")
+
+section <- c("MATH111","MATH111","ENG111")
+grade <- c(78,93,56)
+student <-c("Ghulam Nabi","Airaf","Zain")
+gradebook <- data.frame(section,grade,student)
+mutate(gradebook,Pass.Fail=ifelse(grade >60,"Pass","Fail"))
+mutate(gradebook,letter=ifelse(grade %in% 60:69,"D",
+                               ifelse(grade %in% 70:79,"C",
+                                      ifelse(grade %in% 80:89,"B",
+                                             ifelse(grade %in% 90:99,"A","F")))))
+grepl("MATH",gradebook$section)
+mutate(gradebook,department = 
+         ifelse(grepl("MATH",section),"Math Department",
+                                     ifelse(grepl("ENG",section),"English Department","Other")))
+
+
 ### pipeline function %>%
 head(mtcars)
 mtcars %>% group_by(cyl) %>% summarise(mean=mean(disp),n=n())
@@ -388,6 +462,76 @@ table(sub_m$disp)
 sub_m <- mtcars %>% select(mpg,cyl,disp,hp,gear,carb) %>% filter(carb %in% c(4,2,1))
 table(sub_m$carb)
 
+## practical examples of dplyr
+sample_n(msleep,3) # selects randow rows 
+
+sample_frac(msleep,0.1) # selecting Random Fraction of Rows
+
+distinct(msleep) # Remove Duplicate Rows based on all the variables (Complete Row)
+
+distinct(msleep,genus,.keep_all = T) # Remove Duplicate Rows based on a variable
+
+distinct(msleep,genus,vore,.keep_all = T) # Remove Duplicates Rows based on multiple variables
+
+# select ()
+select(msleep,genus,vore:conservation)
+select(msleep,c(genus,vore,conservation))
+select(msleep,-genus,-vore)
+select(msleep,-c(genus,vore))
+select(msleep,starts_with("s")) #Selecting or Dropping Variables starts with 'Y'
+select(msleep,-starts_with("s"))
+select(msleep,contains("s")) # Selecting Variables contain 's' in their names
+select(msleep,genus,vore,everything()) # Reorder Variables
+
+# rename() function
+rename(msleep,genuss=genus)
+
+# filter() function
+filter(msleep,vore == "herbi")
+filter(msleep,vore %in% c("herbi","omni"))
+
+# summarise() function
+msleep
+summarise(msleep,mean_sleeptotal= mean(sleep_total),
+          median_sleeprem= median(sleep_rem,na.rm = T))
+summarise_at(msleep,vars(sleep_total,sleep_rem),list(~mean(.),~median(.),~n()))
+summarise_at(msleep,vars(sleep_total,sleep_rem),list(~n(),~median(.,na.rm = T),
+                                                     ~sum(is.na(.)),~mean(.,na.rm =T)))
+t <- msleep %>% group_by(vore) %>% summarise_at(vars(sleep_total,sleep_rem),
+                                                funs(n(),mean(.,na.rm=T)))
+
+t
+### join() function
+
+df1 = data.frame(ID = c(1, 2, 3, 4, 5),
+                 w = c('a', 'b', 'c', 'd', 'e'),
+                 x = c(1, 1, 0, 0, 1),
+                 y=rnorm(5),
+                 z=letters[1:5])
+df2 = data.frame(ID = c(1, 7, 3, 6, 8),
+                 a = c('z', 'b', 'k', 'd', 'l'),
+                 b = c(1, 2, 3, 0, 4),
+                 c =rnorm(5),
+                 d =letters[2:6])
+df3 <- inner_join(df1,df2,by="ID")
+df3
+left_join(df1,df2,by="ID")
+right_join(df1,df2,by="ID")
+
+# applying intersect
+mtcars$model <- rownames(mtcars)
+first <- mtcars[1:20,]
+second <- mtcars[10:32,]
+intersect(first,second)
+mtcars
+setdiff(first,second)
+
+# applying union
+x=data.frame(ID = 1:6, ID1= 1:6)
+y=data.frame(ID = 1:6,  ID1 = 1:6)
+union(x,y)
+union_all(x,y)
+?setdiff
 
 # tidyr library
 library(tidyr)
